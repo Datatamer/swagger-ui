@@ -1,9 +1,34 @@
 'use strict';
 
+function fetchTamrSample(el, modelClass) {
+  if (!modelClass) {
+    return setContents(el, 'No model class detected');
+  }
+  if (modelClass.indexOf('inline_model') > -1) {
+    return setContents(el, 'Not supported for inline models');
+  }
+  $.ajax({
+    url: '//api/service/examples/' + modelClass,
+    type: 'GET',
+    success: function(response) {
+      setContents(el, JSON.stringify(response, null, 2));
+    },
+    error: function(response) {
+      var respJson = JSON.parse(response.responseText);
+      setContents(el, JSON.stringify(respJson, null, 2));
+    }
+  });
+}
+
+function setContents(el, contents) {
+  $(el).find('.tamr-sample-json .sample-contents').text(contents);
+}
+
 SwaggerUi.Views.SignatureView = Backbone.View.extend({
   events: {
     'click a.description-link'       : 'switchToDescription',
     'click a.snippet-link'           : 'switchToSnippet',
+    'click a.tamr-sample'           : 'switchToTamrSample',
     'mousedown .snippet_json'          : 'jsonSnippetMouseDown',
     'mousedown .snippet_xml'          : 'xmlSnippetMouseDown'
   },
@@ -29,9 +54,11 @@ SwaggerUi.Views.SignatureView = Backbone.View.extend({
     if (e) { e.preventDefault(); }
 
     $('.snippet', $(this.el)).hide();
+    $('.tamr-sample-json', $(this.el)).hide();
     $('.description', $(this.el)).show();
+
+    $('.signature-nav a', $(this.el)).removeClass('selected');
     $('.description-link', $(this.el)).addClass('selected');
-    $('.snippet-link', $(this.el)).removeClass('selected');
   },
 
   // handler for show sample
@@ -40,8 +67,25 @@ SwaggerUi.Views.SignatureView = Backbone.View.extend({
 
     $('.snippet', $(this.el)).show();
     $('.description', $(this.el)).hide();
+    $('.tamr-sample-json', $(this.el)).hide();
+
+    $('.signature-nav a', $(this.el)).removeClass('selected');
     $('.snippet-link', $(this.el)).addClass('selected');
-    $('.description-link', $(this.el)).removeClass('selected');
+  },
+
+  switchToTamrSample: function(e) {
+    if (e) { e.preventDefault(); }
+
+    $('.snippet', $(this.el)).hide();
+    $('.description', $(this.el)).hide();
+    $('.tamr-sample-json', $(this.el)).show();
+
+    if ($(this.el).find('.tamr-sample-json .sample-contents').html() === '') {
+      fetchTamrSample(this.el, this.model.type);
+    }
+
+    $('.signature-nav a', $(this.el)).removeClass('selected');
+    $('.tamr-sample').addClass('selected');
   },
 
   // handler for snippet to text area
